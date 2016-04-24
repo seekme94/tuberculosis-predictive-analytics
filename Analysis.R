@@ -1,0 +1,278 @@
+#install.packages(c("caret","minqa","e1071","rpart","rattle","rpart.plot","RColorBrewer","randomForest","party","RWeka","elmNN","nnet","neuralnet","sampling"))
+library(caret)
+library(e1071)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(randomForest)
+library(party)
+library(RWeka)
+library(elmNN)
+library(nnet)
+library(neuralnet)
+library(sampling)
+
+setwd("D:/Datasets/Tuberculosis")
+dt <- read.csv("dataset_clean.csv", stringsAsFactors=TRUE)
+limit <- 100
+seed <- 1
+test_cases <- 200
+prune_columns <- FALSE
+tune <- FALSE
+
+# Limit the dataset only to the columns till baseline treatment
+dt <- dt[,c("PatientID","TreatmentComplete","Gender","AgeGroup","WeightGroup","HeightGroup","MaritalStatus","Religion","Caste","ScreeningYear","RegistrationYear","Fever","Cough","CoughDuration","ProductiveCough","BloodInCough","NightSweats","WeightLoss","TBHistory","TBInFamily","SeverityScore","RegistrationDelay","SmearTested","SputumResultDelay","SmearResult","SmearPositive","ScreeningToSmearDelay","XRayDone","XRayResultDelay","XRayResults","XRayIndicative","ScreeningToXRayDelay","GeneXpertTested","GeneXpertResult","DrugResistance","GXPPositive","ScreeningToGXPDelay","DiagnosisDone","ScreeningToDiagnosisDelay","DiagnosedBy","DiagnosisAntibiotic","TBSymptomsDiagnosed","TBContactDiagnosed","Diagnosis","LargeLymphDiagnosed","LymphBiopsyDiagnosed","MantouxDiagnosed","PastTBDiagnosed","XRaySuggestiveDiagnosed","ScreeningToBaselineDelay","SmearToBaselineDelay","XRayToBaselineDelay","GXPToBaselineDelay","DiagnosisToBaselineDelay","BaselineWeightGroup","BaselinePatientCategory","BaselinePatientType","BaselineRegimen","BaselineDoseCombination","BaselineStreptomycin","ScreeningToBaselineWeightDifference","BaselineWeightGroup","HasTreatmentSupporter","DiseaseCategory","DiseaseSite","DoseCombination","PatientType")]
+# Separate test data initially
+set.seed(seed)
+test <- dt[sample(1:nrow(dt), test_cases, replace=FALSE),]
+dt <- subset(dt, !(dt$PatientID %in% test$PatientID))
+## Limit the dataset to the percentage given%
+train <- dt[dt$PatientID %% (100/limit) == 0,]
+
+## Print output to results.txt file in current working directory
+out <- function(x)
+{
+    cat(date(), ": ", x, "\n", file="output.txt", append=TRUE)
+}
+
+# Get Precision/Recall/Accuracy table
+getresults <- function(x, y)
+{
+    matrix <- confusionMatrix(x, y)
+    accuracy <- matrix$overall[1] # Correctness of model
+    precision <- matrix$byClass[3] # Positive prediction value
+    neg_precision <- matrix$byClass[4] # Negative prediction value
+    sensitivity <- matrix$byClass[1] # True positive recognition rate (aka recall)
+    specificity <- matrix$byClass[2] # True negative recognition rate
+    type1_error <- 0 # FP
+    type2_error <- 0 # FN
+    results <- c(accuracy, precision, sensitivity, specificity)
+    results
+}
+
+analyze <- function(dataset, testset, model=c("svm", "rforest", "nnet"), seed, formula, na.remove=TRUE)
+{
+    if (na.remove == TRUE)
+    {
+        dataset <- dataset[complete.cases(dataset),]
+    }
+    # Need to set seed again for the model
+    set.seed(seed)
+    if (model == "svm")
+    {
+        svm_fit <- svm(formula, data=dataset, na.action=na.omit)
+        testset$Predicted <- predict(svm_fit, testset)
+    }
+    if (model == "rforest")
+    {
+        rforest_fit <- randomForest(formula, data=dataset, importance=TRUE, ntree=1000, control=rpart.control(minsplit=10, cp=0,  maxdepth=3))
+        #varImpPlot(rforest_fit)
+        testset$Predicted <- predict(rforest_fit, testset)
+    }
+    if (model == "nnet")
+    {
+        nnet_fit <- avNNet(formula, data=dataset, repeats=3, bag=FALSE, allowParallel=TRUE, decay=0.1, size=5)
+        testset$Predicted <- predict(nnet_fit, testset, type="class")
+    }
+    matrix <- confusionMatrix(testset$TreatmentComplete, testset$Predicted)
+    accuracy <- round(matrix$overall[1] * 100, 2)
+    cols <- paste (colnames(dataset), collapse=",")
+    str <- paste ("Model", model, "Columns", cols, "Accuracy", accuracy)
+    out(str)
+    accuracy
+}
+
+# For every individual column, calculate the accuracy and pick the column with highest accuracy
+if (prune_columns)
+{
+    model="svm"
+    accuracies <- data.frame(Col=colnames(dt)[3:67], Acc=rep(0,65))
+    for (i in 3:67)
+    {
+        dataset <- dt[,c(1,2,i)]
+        formula <- as.factor(TreatmentComplete) ~ .
+        accuracy <- analyze (dataset, test, model, seed, formula)
+        accuracies$Acc[accuracies$Col == colnames(dt)[i]] <- accuracy
+    }
+    svm_accuracies <- accuracies
+
+    model="rforest"
+    accuracies <- data.frame(Col=colnames(dt)[3:67], Acc=rep(0,65))
+    for (i in 3:67)
+    {
+        dataset <- dt[,c(1,2,i)]
+        formula <- as.factor(TreatmentComplete) ~ .
+        accuracy <- analyze (dataset, test, model, seed, formula)
+        accuracies$Acc[accuracies$Col == colnames(dt)[i]] <- accuracy
+    }
+    rforest_accuracies <- accuracies
+    model="nnet"
+    accuracies <- data.frame(Col=colnames(dt)[3:67], Acc=rep(0,65))
+    for (i in 3:67)
+    {
+        dataset <- dt[,c(1,2,i)]
+        formula <- as.factor(TreatmentComplete) ~ .
+        accuracy <- analyze (dataset, test, model, seed, formula)
+        accuracies$Acc[accuracies$Col == colnames(dt)[i]] <- accuracy
+    }
+    nnet_accuracies <- accuracies
+    # Feature selection. For each model, keep appending every feature and recalculate accuracy
+    svm_accuracies
+    rforest_accuracies
+    nnet_accuracies
+
+    yes_prob <- length(dt$TreatmentComplete[dt$TreatmentComplete == 'YES'])/nrow(dt) * 100
+    # The columns with accuracy less than probability of YES on all the models tried are of little use, because hypothetically, they add nothing to prediction
+    
+    accuracies <- data.frame(attribute=svm_accuracies$Col, svm=svm_accuracies$Acc, rforest=rforest_accuracies$Acc, nnet=nnet_accuracies$Acc)
+    # Get the columns indices that are at least as accurate as yes_prob
+    attributes <- c()
+    for (i in 1:nrow(accuracies))
+    {
+        # If any one model gives higher accuracy, then keep it
+        if (accuracies[i,"svm"] >= yes_prob || accuracies[i,"rforest"] >= yes_prob || accuracies[i,"nnet"] >= yes_prob)
+        {
+            attributes <- c(attributes, accuracies$attribute[i])
+        }
+    }
+    print(sort(attributes))
+    dt <- dt[,attributes]
+}
+
+### APPYING MODELS ON COMPLETE DATASETS
+dataset <- train
+head(dataset)
+formula <- as.factor(TreatmentComplete) ~ .
+
+if (tune)
+{
+    ## SVM
+    # Do some tuning to SVM for parameters gamma, cost and kernel; sampling method is bootstrapping
+    set.seed(seed)
+    svm_tune <- tune.svm(formula, data=dataset, tunecontrol=tune.control(sampling = "boot"), gamma=seq(from=0, to=0.5, by=0.15))
+    plot(svm_tune, main="Tune SVM on gamma")
+    set.seed(seed)
+    svm_tune <- tune.svm(formula, data=dataset, tunecontrol=tune.control(sampling = "boot"), cost=2^(0.5:4))
+    plot(svm_tune, main="Tune SVM on cost")
+    set.seed(seed)
+    svm_tune <- tune.svm(formula, data=dataset, tunecontrol=tune.control(sampling = "boot"), kernel="polynomial", degree=1:9)
+    plot(svm_tune, main="Tune SVM on kernel") # Polynomial has very high error rate, trying radial
+    set.seed(seed)
+    svm_tune <- tune.svm(formula, data=dataset, tunecontrol=tune.control(sampling = "boot"), kernel="radial")
+    plot(svm_tune, main="Tune SVM on kernel")
+
+    # Run with custom parameters
+    formula <- as.factor(TreatmentComplete) ~ .
+    set.seed(seed)
+    svm_fit <- svm(formula, data=train, na.action=na.exclude, gamma=0.15, cost=2.6, kernel="radial")
+    test$Predicted <- predict(svm_fit, test)
+    getresults(test$Predicted, test$TreatmentComplete)
+
+    ## RANDOM FOREST
+    # Do some tuning to SVM for parameters gamma, sampling method is bootstrapping
+    set.seed(seed)
+    rf_tune <- tuneRF(dataset[,-57], dataset[,57], ntreeTry=1000, plot=TRUE, mtry=4, ntree=1000)
+    set.seed(seed)
+    rforest_fit <- randomForest(formula, data=train, importance=TRUE, mtry=4, ntree=1000)
+    test$Predicted <- predict(rforest_fit, test)
+    getresults(test$Predicted, test$TreatmentComplete)
+    
+    ## NEURAL NETWORK
+    # Tune for size
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=2)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=3)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    # Tune for repeats
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=2, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    # Tune fore decay
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, decay=0.1, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, decay=0.01, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, decay=0.001, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    # Tune for bagging
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, decay=0.001, bag=TRUE, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=4, repeats=3, decay=0.001, bag=FALSE, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+
+    set.seed(seed)
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=5, repeats=10, decay=0.001, bag=FALSE, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    getresults(test$Predicted, test$TreatmentComplete)
+} else
+{
+    # Run with default parameters
+    formula <- TreatmentComplete ~ Gender + AgeGroup + WeightGroup + HeightGroup + MaritalStatus + Religion + Caste + ScreeningYear + RegistrationYear + Fever + Cough + CoughDuration + ProductiveCough + BloodInCough + NightSweats + WeightLoss + TBHistory + TBInFamily + SeverityScore + RegistrationDelay + SmearTested + SputumResultDelay + SmearResult + SmearPositive + ScreeningToSmearDelay + XRayDone + XRayResultDelay + XRayResults + XRayIndicative + ScreeningToXRayDelay + GeneXpertTested + GeneXpertResult + DrugResistance + GXPPositive + ScreeningToGXPDelay + DiagnosisDone + ScreeningToDiagnosisDelay + DiagnosisAntibiotic + TBSymptomsDiagnosed + TBContactDiagnosed + Diagnosis + LargeLymphDiagnosed + LymphBiopsyDiagnosed + MantouxDiagnosed + PastTBDiagnosed + XRaySuggestiveDiagnosed + ScreeningToBaselineDelay + SmearToBaselineDelay + XRayToBaselineDelay + GXPToBaselineDelay + DiagnosisToBaselineDelay + BaselineWeightGroup + BaselinePatientCategory + BaselinePatientType + BaselineRegimen + BaselineDoseCombination + BaselineStreptomycin + ScreeningToBaselineWeightDifference + BaselineWeightGroup + HasTreatmentSupporter + DiseaseCategory + DiseaseSite + DoseCombination 
+    svm_fit <- svm(formula, data=train, na.action=na.exclude)
+    test$Predicted <- predict(svm_fit, test)
+    getresults(test$Predicted, test$TreatmentComplete)
+
+    formula <- TreatmentComplete ~ Gender + AgeGroup + WeightGroup + HeightGroup + MaritalStatus + Religion + Caste + ScreeningYear + RegistrationYear + Fever + Cough + CoughDuration + ProductiveCough + BloodInCough + NightSweats + WeightLoss + TBHistory + TBInFamily + SeverityScore + RegistrationDelay + SmearTested + SputumResultDelay + SmearResult + SmearPositive + ScreeningToSmearDelay + XRayDone + XRayResultDelay + XRayResults + XRayIndicative + ScreeningToXRayDelay + GeneXpertTested + GeneXpertResult + DrugResistance + GXPPositive + ScreeningToGXPDelay + DiagnosisDone + ScreeningToDiagnosisDelay + DiagnosisAntibiotic + TBSymptomsDiagnosed + TBContactDiagnosed + Diagnosis + LargeLymphDiagnosed + LymphBiopsyDiagnosed + MantouxDiagnosed + PastTBDiagnosed + XRaySuggestiveDiagnosed + ScreeningToBaselineDelay + SmearToBaselineDelay + XRayToBaselineDelay + GXPToBaselineDelay + DiagnosisToBaselineDelay + BaselineWeightGroup + BaselinePatientCategory + BaselinePatientType + BaselineRegimen + BaselineDoseCombination + BaselineStreptomycin + ScreeningToBaselineWeightDifference + BaselineWeightGroup + HasTreatmentSupporter + DiseaseCategory + DiseaseSite + DoseCombination 
+    rforest_fit <- randomForest(formula, data=train, importance=TRUE)
+    test$Predicted <- predict(rforest_fit, test)
+    getresults(test$Predicted, test$TreatmentComplete)
+
+    formula <- TreatmentComplete ~ Gender + AgeGroup + WeightGroup + HeightGroup + MaritalStatus + Religion + Caste + ScreeningYear + RegistrationYear + Fever + Cough + CoughDuration + ProductiveCough + BloodInCough + NightSweats + WeightLoss + TBHistory + TBInFamily + SeverityScore + RegistrationDelay + SmearTested + SputumResultDelay + SmearResult + SmearPositive + ScreeningToSmearDelay + XRayDone + XRayResultDelay + XRayResults + XRayIndicative + ScreeningToXRayDelay + GeneXpertTested + GeneXpertResult + DrugResistance + GXPPositive + ScreeningToGXPDelay + DiagnosisDone + ScreeningToDiagnosisDelay + DiagnosisAntibiotic + TBSymptomsDiagnosed + TBContactDiagnosed + Diagnosis + LargeLymphDiagnosed + LymphBiopsyDiagnosed + MantouxDiagnosed + PastTBDiagnosed + XRaySuggestiveDiagnosed + ScreeningToBaselineDelay + SmearToBaselineDelay + XRayToBaselineDelay + GXPToBaselineDelay + DiagnosisToBaselineDelay + BaselineWeightGroup + BaselinePatientCategory + BaselinePatientType + BaselineRegimen + BaselineDoseCombination + BaselineStreptomycin + ScreeningToBaselineWeightDifference + BaselineWeightGroup + HasTreatmentSupporter + DiseaseCategory + DiseaseSite + DoseCombination 
+    nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=5, repeats=10, decay=0.001, bag=FALSE, MaxNWts=5000)
+    test$Predicted <- predict(nnet_fit, test, type="class")
+    matrix <- confusionMatrix(test$TreatmentComplete, test$Predicted)
+    getresults(test$TreatmentComplete, test$Predicted)
+}
+
+
+
+## Next step: Greedy method
+all.cols <- c("AgeGroup","WeightGroup","HeightGroup","MaritalStatus","Religion","Caste","RegistrationYear","Fever","Cough","CoughDuration","ProductiveCough","BloodInCough","NightSweats","WeightLoss","TBHistory","TBInFamily","SeverityScore","RegistrationDelay","SmearTested","SputumResultDelay","SmearResult","SmearPositive","ScreeningToSmearDelay","XRayDone","XRayResultDelay","XRayResults","XRayIndicative","ScreeningToXRayDelay","GeneXpertTested","GeneXpertResult","DrugResistance","GXPPositive","ScreeningToGXPDelay","DiagnosisDone","ScreeningToDiagnosisDelay","DiagnosedBy","DiagnosisAntibiotic","TBSymptomsDiagnosed","TBContactDiagnosed","Diagnosis","LargeLymphDiagnosed","LymphBiopsyDiagnosed","MantouxDiagnosed","PastTBDiagnosed","XRaySuggestiveDiagnosed","ScreeningToBaselineDelay","SmearToBaselineDelay","XRayToBaselineDelay","GXPToBaselineDelay","DiagnosisToBaselineDelay","BaselineWeightGroup","BaselinePatientCategory","BaselinePatientType","BaselineRegimen","BaselineDoseCombination","BaselineStreptomycin","ScreeningToBaselineWeightDifference","BaselineWeightGroup","HasTreatmentSupporter","DiseaseCategory","DiseaseSite","DoseCombination","PatientType")
+cols <- c("TreatmentComplete","Gender")
+max.accuracy <- 0
+while (i < length(all.cols))
+{
+    ts <- test[,cols]
+    tr <- dt[,cols]
+    formula <- TreatmentComplete ~ .
+    set.seed(seed)
+    svm_fit <- svm(formula, data=tr, na.action=na.exclude)
+    ts$Predicted <- predict(svm_fit, ts)
+    results <- getresults(ts$Predicted, ts$TreatmentComplete)
+    accuracy <- results[1]
+    if (accuracy >= max.accuracy)
+    {
+        print(results)
+        max.accuracy <- accuracy
+        cols <- c(cols, all.cols[i])
+        all.cols <- all.cols[-i]
+        i <- 1
+    } else
+    {
+        i <- i + 1    
+    }
+}

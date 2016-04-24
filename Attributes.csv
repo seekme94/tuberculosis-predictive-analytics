@@ -1,0 +1,95 @@
+Attribute,Description,Data type,Category
+PatientID,Unique patient identifier number,Nominal,-
+GP,"General practitioner, treatment expert",Nominal,Treatment
+GPQualification,Highest qualification of GP,Categorical,Treatment
+Screener,Health worker who screened the patient,Nominal,Screening
+DOB,Patient's date of birth,Quantitative,Demographics
+BirthYear,-,Quantitative,Demographics
+ScreeningAge,Age at the time of screening,Quantitative,Demographics
+Gender,-,Nominal,Demographics
+MaritalStatus,-,Nominal,Demographics
+Religion,-,Nominal,Demographics
+Caste,Ethnic background,Nominal,Demographics
+Weight,Approximate weight in Kg,Quantitative,Demographics
+Height,Approximate height in cm,Quantitative,Demographics
+ScreeningDate,-,Quantitative,Screening
+ScreeningYear,-,Quantitative,Screening
+DateRegistered,Date of registration after screening,Quantitative,Screening
+RegistrationYear,-,Quantitative,Screening
+HasTreatmentSupporter,Does the patient have a caretaker?,Categorical,Treatment
+DiseaseCategory,Category of TB,Categorical,Treatment
+DiseaseSite,Is the TB Pulmonary or outside lungs?,Categorical,Treatment
+LastRegimen,Last drug regimen the patient was on,Categorical,Treatment
+DoseCombination,Dosage description,Quantitative,Treatment
+TreatmentPhase,Intensive or continuation phase,Categorical,Treatment
+PatientType,"Type of patient, New, Relapsed, etc.",Categorical,Treatment
+Fever,Unusual fever,Categorical,Screening
+Cough,Cough,Categorical,Screening
+CoughDuration,For how long the patient has cough,Categorical,Screening
+ProductiveCough,Is the patient producing sputum during cough?,Categorical,Screening
+BloodInCough,Haemoptysis. Coughing up blood,Categorical,Screening
+NightSweats,Sweats during sleep,Categorical,Screening
+WeightLoss,Unexplained loss in weight,Categorical,Screening
+TBHistory,Had the patient had TB before?,Categorical,Screening
+TBInFamily,TB in the family/houshold,Categorical,Screening
+SmearTested,Did the patient have smear microscopy test?,Categorical,Medical tests
+DateSputumSubmitted,Date of submission of sputum sample for test,Quantitative,Medical tests
+DateSputumTested,Date of smear microscopy,Quantitative,Medical tests
+SputumResultDelay,Delay in days between smear submission and test,Quantitative,Medical tests
+SmearResult,Smear microscopy results,Categorical,Medical tests
+SmearPositive,Was the smear results positive?,Categorical,Medical tests
+XRayDone,Was the chest X-Ray taken?,Categorical,Medical tests
+XRayDate,Date of X-Ray,Quantitative,Medical tests
+DateXRayReported,Date of X-Ray results,Quantitative,Medical tests
+XRayResultDelay,Delay in days between X-Ray and results,Quantitative,Medical tests
+XRayResults,X-Ray results,Categorical,Medical tests
+XRayRemarks,Remarks from the Radiologist,Categorical,Medical tests
+XRayIndicative,Did the X-Ray indicate signs of TB?,Categorical,Medical tests
+GeneXpertTested,Did the patient have GeneXpert test?,Categorical,Medical tests
+DateGXPTested,Date of GeneXpert test,Quantitative,Medical tests
+GeneXpertResult,GeneXpert results,Categorical,Medical tests
+DrugResistance,Rif resistance in sputum sample,Categorical,Medical tests
+GXPPositive,Was the GeneXpert test positive?,Categorical,Medical tests
+DiagnosedBy,Which GP diagnosed this patient?,Nominal,Diagnosis
+DiagnosisDate,Date of clinical diagnosis,Quantitative,Diagnosis
+DiagnosisAntibiotic,Were antibiotics prescribed to the patient?,Categorical,Diagnosis
+TBSymptomsDiagnosed,TB symptoms found during diagnosis,Categorical,Diagnosis
+TBContactDiagnosed,Is the suspect in close contact with a TB patient?,Categorical,Diagnosis
+Diagnosis,Diagnosis outcomes from GP,Categorical,Diagnosis
+LargeLymphDiagnosed,Large lymph detected during diagnosis,Categorical,Diagnosis
+LymphBiopsyDiagnosed,Lymph biopsy suggested during diagnosis,Categorical,Diagnosis
+MantouxDiagnosed,Mantoux test suggested during diagnosis,Categorical,Diagnosis
+PastTBDiagnosed,Patient diagnosed with having TB in the past,Categorical,Diagnosis
+XRaySuggestiveDiagnosed,X-Ray report indicating suggestive TB in diagnosis,Categorical,Diagnosis
+OtherTBDiagnosis,Other remarks on TB during diagnosis,Categorical,Diagnosis
+DiagnosisNotes,Doctor's notes on diagnosis,Categorical,Diagnosis
+BaselineDate,Date of baseline treatment,Quantitative,Baseline
+BaselineWeight,Weight of patient in kg on baseline treatment date,Quantitative,Baseline
+BaselinePatientCategory,Disease category that the treatment started on,Categorical,Baseline
+BaselinePatientType,Patient type defined on baseline treatment,Categorical,Baseline
+BaselineRegimen,First regimen at the start of treatment,Categorical,Baseline
+BaselineDoseCombination,Drug dosage prescribed on start of treatment,Categorical,Baseline
+BaselineStreptomycin,Injectable TB medicine prescribed,Categorical,Baseline
+TreatmentEndDate,Date of end of treatment,Quantitative,Treatment
+TreatmentDuration,Total duration of treatment in days,Quantitative,Treatment
+TreatmentOutcome,Treatment results,Categorical,Treatment
+TreatmentOutcomeDetails,Other details about the treatment end,Categorical,Treatment
+AgeGroup,"The age group (child, adult, etc.) that the patient belongs to",Categorical,Demographics
+WeightGroup,Weight group the patient falls in. V. low to v. high,Categorical,Demographics
+HeightGroup,Height group the patient falls in. V. low to v. high,Categorical,Demographics
+RegistrationDelay,Delay in days between initial screening and registration,Quantitative,Screening
+RegimenChanged,Was the regimen changed during treatment,Categorical,Treatment
+SeverityScore,A score representing severity of disease based on symptoms,Quantitative,Screening
+ScreeningToSmearDelay,Delay in days between initial screening and Smear microscopy,Quantitative,Medical tests
+ScreeningToXRayDelay,Delay in days between initial screening and chest X-Ray,Quantitative,Medical tests
+ScreeningToGXPDelay,Delay in days between initial screening and GeneXpert test,Quantitative,Medical tests
+DiagnosisDone,Was the clinical diagnosis done for this patient?,Categorical,Diagnosis
+ScreeningToDiagnosisDelay,Delay in days between initial screening and clinical diagnosis,Quantitative,Diagnosis
+ScreeningToBaselineDelay,Delay in days between initial screening and baseline treatment,Quantitative,Baseline
+SmearToBaselineDelay,Delay in days between smear microscopy and baseline treatment,Quantitative,Baseline
+XRayToBaselineDelay,Delay in days between chest X-Ray and baseline treatment,Quantitative,Baseline
+GXPToBaselineDelay,Delay in days between GeneXpert test and baseline treatment,Quantitative,Baseline
+DiagnosisToBaselineDelay,Delay in days between clinical diagnosis and baseline treatment,Quantitative,Baseline
+BaselineWeightGroup,"The age group (child, adult, etc.) that the patient belongs to at treatment start",Categorical,Baseline
+ScreeningToBaselineWeightDifference,Difference in weights at screening and baseline treatment in kgs,Quantitative,Baseline
+TreatmentComplete,Did the patient complete his treatment?,Categorical,Treatment
