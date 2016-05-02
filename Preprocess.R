@@ -1,14 +1,7 @@
-# library(caret)
-# library(e1071)
 library(rpart)
-# library(rattle)
-# library(rpart.plot)
-# library(party)
-# library(RWeka)
 
 # Give some description about the data and plot it's distribution
-explore <- function(x)
-{
+explore <- function(x) {
     print(summary(x))
     dist <- factor(x, exclude=NULL)
     print(table(dist))
@@ -17,10 +10,9 @@ explore <- function(x)
 }
 
 # Turn data into MD5 hash
-hash <- function(x)
-{
+hash <- function(x) {
     missing <- is.na(x)
-    x[!missing] <- sapply(x[!missing], digest, algo="md5")
+    x[!missing] <- sapply(x[!missing], digest, algo="crc32")
     x
 }
 
@@ -31,8 +23,7 @@ frequent <- function(x) {
 }
 
 # Returns entropy of given vector
-entropy <- function(data)
-{
+entropy <- function(data) {
     dist <- table(data)
     dist <- sapply(dist, function(x) x/sum(dist))
     # Entropy = - p(a)*log(p(a)) - p(b)*log(p(b))
@@ -46,8 +37,7 @@ entropy <- function(data)
 # Central tendency: use mean/median where P(missing values) < 0.05
 # Classification: when the above are not applicable and P(missing values) > 0.5
 # No change: when more than 50% of the data is missing
-setwd("D:/Datasets/Tuberculosis")
-dt <- read.csv("dataset.csv", stringsAsFactors=FALSE, na.strings='')
+dt <- read.csv("D:/Datasets/Tuberculosis/dataset.csv", stringsAsFactors=FALSE, na.strings='')
 head(dt)
 colnames(dt)
 # Change all dates from string to dates
@@ -477,6 +467,17 @@ dt$ScreeningYear <- as.factor(dt$ScreeningYear)
 
 # Check the entropy of target variable
 entropy(dt$TreatmentComplete)
+
+# Choose variables to include in final data set. Remove all those with statistically insignificant chisq.test score
+# removed <- c("Religion", "Caste", "Fever", "Cough", "CoughDuration", "ProductiveCough", "BloodInCough", "NightSweats", "WeightLoss", "SeverityScore", "SmearTested", "SmearPositive", "DiagnosisDone")
+attributes <- c("PatientID", "TreatmentComplete", "Gender", "AgeGroup", "Weight", "HeightGroup", "MaritalStatus", "ScreeningYear", "RegistrationYear", "TBHistory", "TBInFamily", 
+  "RegistrationDelay", "SputumResultDelay", "SmearResult", "ScreeningToSmearDelay", "XRayDone", "XRayResultDelay", "XRayResults", "XRayIndicative", "ScreeningToXRayDelay", "GeneXpertTested", "GeneXpertResult", "DrugResistance", "GXPPositive", 
+  "ScreeningToGXPDelay", "ScreeningToDiagnosisDelay", "DiagnosedBy", "DiagnosisAntibiotic", "TBSymptomsDiagnosed", "TBContactDiagnosed", "Diagnosis", "LargeLymphDiagnosed", "LymphBiopsyDiagnosed", "MantouxDiagnosed", "PastTBDiagnosed", "XRaySuggestiveDiagnosed", 
+  "ScreeningToBaselineDelay", "SmearToBaselineDelay", "XRayToBaselineDelay", "GXPToBaselineDelay", "DiagnosisToBaselineDelay", "BaselineWeightGroup", "BaselinePatientCategory", "BaselinePatientType", "BaselineRegimen", "BaselineDoseCombination", "BaselineStreptomycin", "ScreeningToBaselineWeightDifference", 
+  "DiseaseCategory", "DiseaseSite", "DoseCombination")
+# Remove DIED and limit the dataset only to the columns till baseline treatment 
+dt <- dt[dt$TreatmentOutcome != 'DIED', attributes]
+nrow(dt)
 
 # Write the pre-processed data into new file
 write.csv(dt, file="dataset_clean.csv", append=FALSE, quote=TRUE)
