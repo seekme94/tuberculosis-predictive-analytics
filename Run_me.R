@@ -14,8 +14,12 @@ library(sampling)
 
 ### FUNCTIONS ###
 ## Print output to results.txt file in current working directory
-out <- function(x) {
+out <- function(x, print_date=FALSE) {
+  if (print_date) {
     cat(date(), ": ", x, "\n", file="output.txt", append=TRUE)
+  } else {
+    cat(x, "\n", file="output.txt", append=TRUE)
+  }
 }
 
 ## Provide some basic stats about an attribute
@@ -34,16 +38,16 @@ analyze <- function(dataset, testset, model=c("svm", "rforest", "nnet"), seed, f
     # Need to set seed again for the model
     set.seed(seed)
     if (model == "svm") {
-        svm_fit <- svm(formula, data=dataset, na.action=na.omit)
+        svm_fit <- svm(formula, data=dataset, na.action=na.omit, kernel="radial")
         testset$Predicted <- predict(svm_fit, testset)
     }
     if (model == "rforest") {
-        rforest_fit <- randomForest(formula, data=dataset, importance=TRUE, ntree=1000)
+        rforest_fit <- randomForest(formula, data=dataset, importance=TRUE, ntree=1000, mtry=4)
         #varImpPlot(rforest_fit)
         testset$Predicted <- predict(rforest_fit, testset)
     }
     if (model == "nnet") {
-        nnet_fit <- avNNet(formula, data=dataset, repeats=3, bag=FALSE, allowParallel=TRUE, decay=0.001, size=5)
+        nnet_fit <- avNNet(formula, data=dataset, repeats=10, bag=FALSE, allowParallel=TRUE, decay=0.001, size=5)
         testset$Predicted <- predict(nnet_fit, testset, type="class")
     }
     matrix <- confusionMatrix(testset$TreatmentComplete, testset$Predicted)
@@ -72,7 +76,8 @@ seeds <- c(10, 300, 5000, 700)
 limits <- c(0.2, 0.5, 1)
 test_cases <- 0.2
 sampling <- "stratified" # random or stratified
-file <- "sample_dataset.csv"
+#file <- "sample_dataset.csv"
+file <- "dataset_clean.csv"
 
 ################# INDIVIDUAL ACCURACIES #################
 
