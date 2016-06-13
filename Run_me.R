@@ -47,7 +47,7 @@ analyze <- function(dataset, testset, model=c("svm", "rforest", "nnet"), seed, f
         testset$Predicted <- predict(rforest_fit, testset)
     }
     if (model == "nnet") {
-        nnet_fit <- avNNet(formula, data=dataset, repeats=10, bag=FALSE, allowParallel=TRUE, decay=0.001, size=5)
+        nnet_fit <- avNNet(formula, data=dataset, repeats=70, bag=FALSE, allowParallel=TRUE, decay=0.1, size=3)
         testset$Predicted <- predict(nnet_fit, testset, type="class")
     }
     matrix <- confusionMatrix(testset$TreatmentComplete, testset$Predicted)
@@ -119,16 +119,16 @@ for (limit in limits) {
         
         formula <- TreatmentComplete ~ .
         
-        # Run with default parameters
-        svm_fit <- svm(formula, data=train, na.action=na.exclude)
+        # Run with tuned parameters
+        svm_fit <- svm(formula, data=train, na.action=na.exclude, gamma=0.1, cost=1.414)
         test$Predicted <- predict(svm_fit, test)
         svm_results <- getresults(test$Predicted, test$TreatmentComplete)
         
-        rforest_fit <- randomForest(formula, data=train, importance=TRUE, na.action=na.exclude)
+        rforest_fit <- randomForest(formula, data=train, importance=TRUE, mtry=10, ntree=2000, na.action=na.exclude)
         test$Predicted <- predict(rforest_fit, test)
         rforest_results <- getresults(test$Predicted, test$TreatmentComplete)
         
-        nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=5, repeats=10, decay=0.001, bag=FALSE, MaxNWts=5000, trace=FALSE)
+        nnet_fit <- avNNet(formula, data=train, allowParallel=TRUE, size=3, repeats=70, decay=0.1, bag=FALSE, MaxNWts=5000, trace=FALSE)
         test$Predicted <- predict(nnet_fit, test, type="class")
         matrix <- confusionMatrix(test$TreatmentComplete, test$Predicted)
         nnet_results <- getresults(test$TreatmentComplete, test$Predicted)

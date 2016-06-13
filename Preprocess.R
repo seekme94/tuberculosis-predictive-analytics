@@ -22,6 +22,12 @@ frequent <- function(x) {
   ux[which.max(tabulate(match(x, ux)))]
 }
 
+# Normalize a vector between 0 and 1
+normalize <- function(x) {
+  x <- (x - min(x)) / (max(x) - min(x))
+  x
+}
+
 # Returns entropy of given vector
 entropy <- function(data) {
     dist <- table(data)
@@ -464,6 +470,10 @@ dt$BaselineCHWID <- hash(dt$BaselineCHWID)
 
 # Turn qualitative variables in numeric form into factors
 dt$ScreeningYear <- as.factor(dt$ScreeningYear)
+
+# Scale real-valued variables
+dt$Weight <- normalize(dt$Weight)
+dt$ScreeningToBaselineWeightDifference <- normalize(dt$ScreeningToBaselineWeightDifference)
 
 # Check the entropy of target variable
 entropy(dt$TreatmentComplete)
