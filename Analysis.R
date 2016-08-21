@@ -145,17 +145,25 @@ if (tune)
   tune_test <- train[sample(1:nrow(train), nrow(train) * 0.2),]
   tune_train <- subset(train, !(train$PatientID %in% tune_test$PatientID))
   
+  # SLR
+  glm_fit <- glm(formula, data=tune_train, family=binomial(link="logit"))
+  tune_test$Predicted <- predict(glm_fit, type="response", tune_test)
+  tune_test$Predicted <- ifelse(tune_test$Predicted >= 0.5, 'YES', 'NO')
+  tune_test$Predicted <- as.factor(tune_test$Predicted)
+  getresults(tune_test$Predicted, tune_test$TreatmentComplete)
+
   ## SVM
   # Do some tuning to SVM for parameters gamma, cost and kernel; sampling method is bootstrapping
   set.seed(seed)
-  svm_tune <- tune.svm(formula, data=tune_train, tunecontrol=tune.control(sampling = "boot"), gamma=seq(from=0.1, to=0.5, by=0.05), cost=2^(0.5:3))
+  svm_tune <- tune.svm(formula, data=tune_train, tunecontrol=tune.control(sampling = "boot"), gamma=seq(from=0.1, to=0.5, by=0.05), cost=2^(0.1:3))
   plot(svm_tune, main="Tune SVM on gamma and cost")
-  # gamma=0.1, cost=1.414
+  print(svm_tune)
+  # gamma=0.1, cost=1.072
   
   # Run with custom parameters on full data
   formula <- as.factor(TreatmentComplete) ~ .
   set.seed(seed)
-  svm_fit <- svm(formula, data=train, na.action=na.exclude, gamma=0.1, cost=1.414, kernel="radial")
+  svm_fit <- svm(formula, data=train, na.action=na.exclude, gamma=0.1, cost=1.072, kernel="radial")
   tune_test$Predicted <- predict(svm_fit, tune_test)
   getresults(tune_test$Predicted, tune_test$TreatmentComplete)
   
@@ -163,9 +171,13 @@ if (tune)
   # Do some tuning to RF to get optimal value of mtry, ntree
   set.seed(seed)
   rf_tune <- tuneRF(tune_train[,-2], tune_train[,2], stepFactor=0.16, improve=0.05, ntreeTry=1000, plot=TRUE)
+
   
   set.seed(seed)
-  rforest_fit <- randomForest(formula, data=tune_train, importance=TRUE, mtry=10, ntree=2000)
+  paste(names(tune_train), collapse=' + ')
+  formula = as.factor(TreatmentComplete) ~ Gender + AgeGroup + Weight + HeightGroup + MaritalStatus + TBHistory + RegistrationDelay + SputumResultDelay + SmearResult + ScreeningToSmearDelay + XRayDone + XRayResultDelay + XRayResults + XRayIndicative + ScreeningToXRayDelay + GeneXpertTested + GeneXpertResult + DrugResistance + GXPPositive + ScreeningToGXPDelay + ScreeningToDiagnosisDelay + DiagnosedBy + DiagnosisAntibiotic + TBSymptomsDiagnosed + TBContactDiagnosed + Diagnosis + LargeLymphDiagnosed + LymphBiopsyDiagnosed + MantouxDiagnosed + PastTBDiagnosed + XRaySuggestiveDiagnosed + ScreeningToBaselineDelay + SmearToBaselineDelay + XRayToBaselineDelay + GXPToBaselineDelay + DiagnosisToBaselineDelay + BaselineWeightGroup + BaselinePatientCategory + BaselinePatientType + BaselineRegimen + BaselineDoseCombination + BaselineStreptomycin + ScreeningToBaselineWeightDifference + DiseaseCategory + DiseaseSite + DoseCombination
+
+  rforest_fit <- randomForest(formula, data=tune_train, importance=TRUE, mtry=10, ntree=500)
   tune_test$Predicted <- predict(rforest_fit, tune_test)
   getresults(tune_test$Predicted, tune_test$TreatmentComplete)
   
